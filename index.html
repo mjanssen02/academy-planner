@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f5c4a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Academy">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Claude Academy Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column, summary band → tabbed workspace (Agenda / Courses / Tests / Settings) */
+:root{
+  --bg:#f3f4f1; --surface:#ffffff; --ink:#16201c; --muted:#5d6a64; --line:#d9ddd6;
+  --accent:#1f5c4a; --accent-soft:#dcebe4; --accent-ink:#ffffff;
+  --ok:#2f7d4f; --ok-soft:#e0f1e6; --warn:#a2610c; --warn-soft:#fbecd3; --bad:#b03a2e; --bad-soft:#f8e0dc;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111715; --surface:#19211e; --ink:#e7ece9; --muted:#9aa8a1; --line:#2c3833;
+  --accent:#6fc2a3; --accent-soft:#1f3a31; --accent-ink:#0d1512;
+  --ok:#73c995; --ok-soft:#1c3326; --warn:#e8ac55; --warn-soft:#3a2b14; --bad:#ef8a7e; --bad-soft:#3d1f1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111715; --surface:#19211e; --ink:#e7ece9; --muted:#9aa8a1; --line:#2c3833;
+  --accent:#6fc2a3; --accent-soft:#1f3a31; --accent-ink:#0d1512;
+  --ok:#73c995; --ok-soft:#1c3326; --warn:#e8ac55; --warn-soft:#3a2b14; --bad:#ef8a7e; --bad-soft:#3d1f1b; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:1.75rem;font-weight:700}
+h2{font-size:1.2rem;font-weight:700}
+h3{font-size:1rem;font-weight:600;font-family:var(--f-body)}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+header.top{display:flex;flex-direction:column;gap:6px}
+.sync{font-size:.78rem}
+/* summary band */
+.summary{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px}
+.stat{display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat .big{font-family:var(--f-mono);font-size:1.5rem;font-weight:500}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .4s}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.plain{background:var(--accent-soft);color:var(--accent)}
+.next{display:flex;flex-direction:column;gap:4px;min-width:0}
+/* tabs */
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 12px;font:600 .92rem var(--f-body);color:var(--muted);cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section.panel{display:flex;flex-direction:column;gap:14px}
+/* agenda */
+.week{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.week.current{border-color:var(--accent)}
+.week-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.session{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:start;padding-top:10px;border-top:1px dashed var(--line)}
+.session .body{min-width:0;display:flex;flex-direction:column;gap:3px}
+.session .when{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.check{width:24px;height:24px;border-radius:6px;border:2px solid var(--line);background:var(--surface);cursor:pointer;display:grid;place-items:center;padding:0;color:var(--accent-ink)}
+.check[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
+.check svg{width:14px;height:14px;opacity:0}
+.check[aria-pressed="true"] svg{opacity:1}
+.done .title{text-decoration:line-through;color:var(--muted)}
+.tag{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+/* courses */
+.course{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.course-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+a{color:var(--accent);font-weight:600}
+.btn{font:600 .88rem var(--f-body);padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.5;cursor:default}
+/* quiz */
+.quiz-pick{display:flex;flex-wrap:wrap;gap:8px}
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{text-align:left;font:500 .93rem var(--f-body);padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.explain{font-size:.9rem;padding:10px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0}
+/* settings */
+.form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:600}
+input,select{font:400 .95rem var(--f-body);padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.note{font-size:.85rem;color:var(--muted);max-width:65ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}*{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Finance &amp; legal upskilling · Anthropic Academy</span>
+    <h1>Claude Academy Planner</h1>
+    <p class="muted sync" id="sync">Loading your progress…</p>
+  </header>
+
+  <div class="summary" aria-live="polite">
+    <div class="stat"><span class="eyebrow">Sessions done</span><span class="big" id="sDone">0 / 0</span><div class="bar"><i id="sBar"></i></div></div>
+    <div class="stat"><span class="eyebrow">Schedule</span><span id="sStatus"></span><span class="muted" style="font-size:.85rem" id="sStatusNote"></span></div>
+    <div class="stat"><span class="eyebrow">Test average</span><span class="big" id="sQuiz">–</span><span class="muted" style="font-size:.85rem" id="sQuizNote"></span></div>
+    <div class="next"><span class="eyebrow">Next up</span><strong id="nTitle"></strong><span class="mono muted" style="font-size:.8rem" id="nWhen"></span></div>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="t-agenda" aria-selected="true" data-tab="agenda">Agenda</button>
+    <button role="tab" id="t-courses" aria-selected="false" data-tab="courses">Courses</button>
+    <button role="tab" id="t-tests" aria-selected="false" data-tab="tests">Tests</button>
+    <button role="tab" id="t-settings" aria-selected="false" data-tab="settings">Schedule settings</button>
+  </nav>
+
+  <section class="panel" id="p-agenda"></section>
+  <section class="panel" id="p-courses" hidden></section>
+  <section class="panel" id="p-tests" hidden></section>
+  <section class="panel" id="p-settings" hidden>
+    <div class="form">
+      <label for="startDate">Start week (Monday)<input type="date" id="startDate"></label>
+      <label for="dayA">Learn day (45 min)<select id="dayA"></select></label>
+      <label for="dayB">Apply day (30 min)<select id="dayB"></select></label>
+      <label for="timeA">Time slot<input type="time" id="timeA"></label>
+    </div>
+    <p class="note">The plan is 10 weeks with two short blocks a week: one to watch a course, one to apply it to a real (anonymised) finance or legal document. Week 10 is an empty buffer, because busy weeks happen. If you fall behind, move the start week forward instead of doubling up. Session lengths are estimates; Anthropic doesn't publish course durations.</p>
+    <div class="form" style="grid-template-columns:1fr">
+      <h3>Move progress between devices</h3>
+      <p class="note">Progress is stored in this browser only. To continue on another device: Export here, send the file to yourself (AirDrop, email), then Import it on the other device.</p>
+      <div class="row"><button class="btn primary" id="exportBtn">Export progress</button><label class="btn" for="importFile" style="flex-direction:row;font-weight:600">Import progress<input type="file" id="importFile" accept=".json,application/json" hidden></label><span class="muted" id="ioMsg"></span></div>
+    </div>
+    <div class="row"><button class="btn" id="resetBtn">Clear all progress</button><span id="resetConfirm" hidden class="row"><span class="muted">This wipes ticks and scores.</span><button class="btn primary" id="resetYes">Yes, clear</button><button class="btn" id="resetNo">Keep</button></span></div>
+  </section>
+</div>
+
+<script>
+const BASE="https://anthropic.skilljar.com/";
+const COURSES=[
+ {id:"cap",name:"AI Capabilities and Limitations",slug:"ai-capabilities-and-limitations",why:"Know where AI goes wrong before trusting it with figures or clauses."},
+ {id:"flu",name:"AI Fluency: Framework & Foundations",slug:"ai-fluency-framework-foundations",why:"The 4D framework for deciding what to delegate and how to check the result."},
+ {id:"c101",name:"Claude 101",slug:"claude-101",why:"Chat vs Cowork vs Code, Projects, Skills and connectors."},
+ {id:"cow",name:"Introduction to Claude Cowork",slug:"introduction-to-claude-cowork",why:"Where finance and legal work gets done: files, plugins, multi-step tasks."},
+ {id:"skl",name:"Introduction to agent skills",slug:"introduction-to-agent-skills",why:"Turn your contract playbook and month-end routines into reusable skills."},
+ {id:"ent",name:"Deploying Claude Enterprise with Confidence",slug:"deploying-claude-enterprise-with-confidence",why:"Structure, access, governance, spend, visibility: your AI-governance lens."},
+ {id:"mcp",name:"Introduction to Model Context Protocol",slug:"introduction-to-model-context-protocol",why:"Optional. Connect Claude to your own finance systems. Needs Python.",optional:true}
+];
+const WEEKS=[
+ {c:"cap",learn:"Watch AI Capabilities and Limitations (whole course)",apply:"Ask Claude to summarise an anonymised supplier contract. Check 3 of its claims against the clause text and note every error."},
+ {c:"flu",learn:"AI Fluency, part 1: Delegation and Description",apply:"List 10 tasks from your week. Mark each AI / human / hybrid, with one line of why."},
+ {c:"flu",learn:"AI Fluency, part 2: Discernment and Diligence",apply:"Take one AI output from last week and write down what you verified, what you didn't, and why."},
+ {c:"c101",learn:"Claude 101 (whole course)",apply:"Create a Project “Vendor contracts” and paste in your standard negotiation positions as instructions."},
+ {c:"cow",learn:"Claude Cowork, part 1: task loop, files, plugins",apply:"Run the NDA triage skill (legal plugin) on two real NDAs. Compare its GREEN/YELLOW/RED to your own call."},
+ {c:"cow",learn:"Claude Cowork, part 2: research workflows, steering safely",apply:"Run variance analysis (finance plugin) on an anonymised budget-vs-actual export. Tie totals back to source."},
+ {c:"skl",learn:"Agent skills, part 1: build your first skill",apply:"Draft a skill: your contract-review playbook (positions, fallbacks, red lines)."},
+ {c:"skl",learn:"Agent skills, part 2: share and troubleshoot",apply:"Test your skill on 3 contracts. Fix the description until it triggers on the right requests."},
+ {c:"ent",learn:"Deploying Claude Enterprise with Confidence",apply:"Write the five rollout decisions for your team, with GDPR and EU AI Act notes per decision."},
+ {c:null,learn:"Buffer week: catch up on anything missed",apply:"Retake every test below 80%."}
+];
+const QUIZ={
+cap:[
+ {q:"Claude cites an EU AI Act article number with full confidence. What do you do?",o:["Use it; confident answers are reliable","Check it against the official text before relying on it","Ask Claude if it is sure, then use it"],a:1,e:"Models can produce plausible but wrong citations. Confidence in the wording says nothing about accuracy. Asking 'are you sure?' is not verification."},
+ {q:"You need totals across a 400-row cost export. Safest approach?",o:["Ask Claude to add them up in its reply","Have Claude compute them in code or a spreadsheet, then tie back to the source total","Estimate from the first 50 rows"],a:1,e:"Language models predict text; long arithmetic in prose drifts. Computation in code is checkable."},
+ {q:"A regulation changed last month. Why might Claude miss it?",o:["Its training has a knowledge cutoff unless it searches or you give it the source","It refuses legal topics","It only knows US law"],a:0,e:"Give it the current text or let it search, and check the date of what it used."},
+ {q:"The same prompt gives two slightly different answers. What does that mean?",o:["Something is broken","Outputs are probabilistic; variation is normal, so check substance not wording","The second answer is always better"],a:1,e:"That's why verification belongs in your workflow, not as a one-off."},
+ {q:"Best way to reduce errors in a contract review?",o:["Give the full document and ask it to quote the clause text behind each finding","Upload only the summary page","Ask for a shorter answer"],a:0,e:"Quoted clauses let you check every finding in seconds."}],
+flu:[
+ {q:"Deciding whether a task should go to AI at all is called:",o:["Description","Delegation","Diligence"],a:1,e:"Delegation: what to hand to AI, what to keep, what to share."},
+ {q:"Writing clear context, desired format and constraints is:",o:["Description","Discernment","Delegation"],a:0,e:"Description is how you communicate the task to the AI."},
+ {q:"Critically judging whether the output is accurate and fit for purpose is:",o:["Diligence","Discernment","Description"],a:1,e:"Discernment is evaluating what comes back, including the process behind it."},
+ {q:"Taking responsibility for what you share, publish and disclose about AI use is:",o:["Delegation","Diligence","Discernment"],a:1,e:"Diligence covers accountability, transparency and safe handling."},
+ {q:"Someone pastes confidential margin data into an unapproved AI tool to draft CFO commentary. The main failure is:",o:["Description","Diligence","Discernment"],a:1,e:"The prompt might be fine; the data handling is not. That is a Diligence failure (with a Delegation one too)."}],
+c101:[
+ {q:"Where do you keep standing context for a recurring workstream like vendor contracts?",o:["Paste it in every new chat","A Project with its own instructions and files","Your browser bookmarks"],a:1,e:"Projects carry instructions and reference files across every chat inside them."},
+ {q:"Multi-step work on your own files that ends in a finished deliverable fits best in:",o:["Chat","Cowork","Claude Code"],a:1,e:"Chat is for conversation, Code for software work, Cowork for hands-on knowledge work on files."},
+ {q:"A Skill is:",o:["A paid add-on model","Reusable instructions Claude loads when a task matches","A browser extension"],a:1,e:"Skills package how to do a task well, so you stop re-explaining it."},
+ {q:"What do connectors do?",o:["Let Claude read from or act in apps like Gmail or Drive","Speed up the model","Translate the interface"],a:0,e:"They bring your own data and tools into the work, under your permissions."},
+ {q:"The strongest NDA-review prompt includes:",o:["“Check this NDA”","Your role, your standard positions and the output format you want","Only the counterparty name"],a:1,e:"Context plus standards plus format is what turns a generic review into your review."}],
+cow:[
+ {q:"A plugin in Cowork is:",o:["A bundle of skills, commands and connectors for a role, like finance or legal","A theme","A different model"],a:0,e:"That's why the finance and legal plugins give you ready workflows such as NDA triage and variance analysis."},
+ {q:"Before Cowork acts on your files, good practice is:",o:["Let it run and check nothing","Review its plan, keep originals, check the outputs","Turn off all permissions"],a:1,e:"Steering multi-step work means checking direction early, not only the end result."},
+ {q:"Month-end variance from an export: right approach?",o:["Paste the numbers into chat and ask for commentary","Give it the file, let it compute, then reconcile totals to source","Describe the numbers from memory"],a:1,e:"Computation on the real file plus a tie-out to source totals is the audit-proof route."},
+ {q:"Sending an email or submitting something irreversible should:",o:["Happen automatically","Require your explicit confirmation","Be avoided entirely"],a:1,e:"Irreversible steps get a human yes, every time."},
+ {q:"Best first workflow to hand to Cowork?",o:["Your most sensitive board paper","A frequent, well-defined, low-risk task with checkable output","Something you do once a year"],a:1,e:"High frequency and easy checking give you fast learning at low risk."}],
+skl:[
+ {q:"At its core a skill is:",o:["A folder with a SKILL.md instruction file, plus optional scripts or references","A fine-tuned model","A Slack bot"],a:0,e:"Plain instructions in markdown, with resources alongside."},
+ {q:"Why does the skill's description matter so much?",o:["It sets the colour scheme","Claude decides when to load the skill based on it","It's shown to customers"],a:1,e:"A vague description means the skill triggers at the wrong time, or never."},
+ {q:"Which is the best candidate for a skill?",o:["A one-off question","Your contract-review playbook with standard positions and fallbacks","Today's weather"],a:1,e:"Repeatable, rule-based judgement is exactly what skills capture."},
+ {q:"Why keep SKILL.md lean and point to reference files?",o:["Files are loaded only when needed, which saves context","Long files are not allowed","It looks tidier"],a:0,e:"Progressive loading keeps Claude focused on what the task needs."},
+ {q:"Sharing a skill across your team gives you:",o:["The same playbook applied consistently, version-controlled","Faster internet","Nothing beyond personal use"],a:0,e:"One maintained skill beats ten slightly different copy-paste prompts."}],
+ent:[
+ {q:"Which is NOT one of the five rollout decisions?",o:["Access","Model training","Spend"],a:1,e:"The five are Structure & Identity, Access, Governance, Spend and Visibility."},
+ {q:"Deciding who can use which connectors and data is:",o:["Access","Visibility","Spend"],a:0,e:"Access sets who reaches what."},
+ {q:"Usage policy and data-handling rules aligned with GDPR and the EU AI Act fall under:",o:["Structure & Identity","Governance","Spend"],a:1,e:"Governance is where your legal and compliance requirements land."},
+ {q:"Setting budget limits per team is:",o:["Spend","Access","Governance"],a:0,e:"Spend covers cost control."},
+ {q:"Usage analytics and audit logs fall under:",o:["Visibility","Structure & Identity","Access"],a:0,e:"Visibility is how you see what's actually happening after rollout."}],
+mcp:[
+ {q:"MCP's three core primitives are:",o:["Tools, resources, prompts","Users, roles, groups","Models, tokens, caches"],a:0,e:"Tools are actions, resources are data, prompts are reusable templates."},
+ {q:"An MCP server does what?",o:["Hosts the Claude model","Exposes a system's data and actions to Claude in a standard way","Stores chat history"],a:1,e:"It's the adapter between Claude and your system."},
+ {q:"The intro course builds servers and clients in:",o:["Python","Excel macros","COBOL"],a:0,e:"Some coding is needed. Skip it if you won't write code."},
+ {q:"Connecting Claude to a finance system, start with:",o:["Full write access","Least privilege, read-only first","Shared admin credentials"],a:1,e:"Basic control hygiene: widen access only when a use case proves it needs more."},
+ {q:"Tools vs resources:",o:["Tools are actions the model can call; resources are data provided as context","They are the same","Resources are paid tools"],a:0,e:"The distinction decides what Claude can change versus only read."}]
+};
+const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const DEFAULT={start:"2026-10-26",dayA:1,dayB:3,time:"12:30",done:{},quiz:{}};
+let state=JSON.parse(JSON.stringify(DEFAULT));
+let ref=null, saveTimer=null, quizRun=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cName=id=>(COURSES.find(c=>c.id===id)||{}).name||"";
+
+function parseDate(s){const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);}
+function mondayOf(d){const x=new Date(d);const wd=(x.getDay()+6)%7;x.setDate(x.getDate()-wd);x.setHours(0,0,0,0);return x;}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function fmt(d){return d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});}
+function sessions(){
+  const m=mondayOf(parseDate(state.start));const out=[];
+  WEEKS.forEach((w,i)=>{
+    const a=new Date(m);a.setDate(m.getDate()+i*7+state.dayA);
+    const b=new Date(m);b.setDate(m.getDate()+i*7+state.dayB);
+    out.push({id:"w"+(i+1)+"a",week:i+1,kind:"Learn · 45 min",title:w.learn,date:a,course:w.c});
+    out.push({id:"w"+(i+1)+"b",week:i+1,kind:"Apply · 30 min",title:w.apply,date:b,course:w.c});
+  });return out;
+}
+function today0(){const t=new Date();t.setHours(0,0,0,0);return t;}
+
+function render(){
+  const ss=sessions(),t=today0();
+  const done=ss.filter(s=>state.done[s.id]).length;
+  $("sDone").textContent=done+" / "+ss.length;
+  $("sBar").style.width=(done/ss.length*100)+"%";
+  const overdue=ss.filter(s=>!state.done[s.id]&&s.date<t).length;
+  const st=$("sStatus"),sn=$("sStatusNote");
+  if(t<mondayOf(parseDate(state.start))){st.innerHTML='<span class="pill plain">Starts '+esc(fmt(mondayOf(parseDate(state.start))))+'</span>';sn.textContent="";}
+  else if(overdue===0){st.innerHTML='<span class="pill ok">On track</span>';sn.textContent="Nothing overdue.";}
+  else if(overdue<=2){st.innerHTML='<span class="pill warn">'+overdue+' behind</span>';sn.textContent="Catch up in the buffer week.";}
+  else{st.innerHTML='<span class="pill bad">'+overdue+' behind</span>';sn.textContent="Move the start week forward in Settings.";}
+  const scores=Object.values(state.quiz).map(q=>q.best);
+  $("sQuiz").textContent=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*20)+"%":"–";
+  $("sQuizNote").textContent=scores.length+" of "+COURSES.length+" tests taken";
+  const nx=ss.find(s=>!state.done[s.id]);
+  $("nTitle").textContent=nx?nx.title:"All sessions done";
+  $("nWhen").textContent=nx?fmt(nx.date)+" · "+state.time+" · "+nx.kind:"";
+  renderAgenda(ss,t);renderCourses(ss);renderTests();
+}
+const tick='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+function renderAgenda(ss,t){
+  const curWeek=Math.floor((t-mondayOf(parseDate(state.start)))/864e5/7)+1;
+  let h="";
+  WEEKS.forEach((w,i)=>{
+    const n=i+1,wk=ss.filter(s=>s.week===n);
+    const allDone=wk.every(s=>state.done[s.id]);
+    h+='<article class="week'+(n===curWeek?' current':'')+'"><div class="week-head"><h2>Week '+n+(w.c?' · '+esc(cName(w.c)):'')+'</h2><span class="row">'+(n===curWeek?'<span class="pill plain">This week</span>':'')+(allDone?'<span class="pill ok">Done</span>':'')+'</span></div>';
+    wk.forEach(s=>{
+      const d=!!state.done[s.id],late=!d&&s.date<t;
+      h+='<div class="session'+(d?' done':'')+'"><button class="check" aria-pressed="'+d+'" aria-label="Mark done: '+esc(s.title)+'" data-s="'+s.id+'">'+tick+'</button><div class="body"><span class="tag">'+s.kind+'</span><span class="title">'+esc(s.title)+'</span><span class="when">'+fmt(s.date)+' · '+state.time+'</span></div><div>'+(late?'<span class="pill bad">Overdue</span>':'')+'</div></div>';
+    });
+    h+='</article>';
+  });
+  $("p-agenda").innerHTML=h;
+}
+function renderCourses(ss){
+  let h='<p class="note">Courses are free on Anthropic Academy; sign in with any email. Each one ends with its own official quiz and certificate. The tests in this app are extra self-checks focused on finance and legal use, not the official ones.</p>';
+  COURSES.forEach(c=>{
+    const ls=ss.filter(s=>s.course===c.id),dn=ls.filter(s=>state.done[s.id]).length;
+    const q=state.quiz[c.id];
+    let status;
+    if(c.optional&&!ls.length)status='<span class="pill plain">Optional, after week 10</span>';
+    else if(ls.length&&dn===ls.length)status='<span class="pill ok">Sessions done</span>';
+    else if(dn>0)status='<span class="pill warn">'+dn+' of '+ls.length+' sessions</span>';
+    else status='<span class="pill plain">Not started</span>';
+    h+='<article class="course"><div class="course-head"><h2>'+esc(c.name)+'</h2>'+status+'</div><p class="muted">'+esc(c.why)+'</p><div class="row"><a href="'+BASE+c.slug+'" target="_blank" rel="noopener">Open course ↗</a><button class="btn" data-quiz="'+c.id+'">'+(q?'Retake test · best '+q.best+'/5':'Take test')+'</button></div></article>';
+  });
+  $("p-courses").innerHTML=h;
+}
+function renderTests(){
+  if(quizRun){renderQuizRun();return;}
+  let h='<p class="note">Five questions per course, with the reasoning shown after each answer. Take a test right after the Learn session; aim for 4 out of 5. Your best score is kept.</p><div class="quiz-pick">';
+  COURSES.forEach(c=>{const q=state.quiz[c.id];h+='<button class="btn'+(q?'':' primary')+'" data-quiz="'+c.id+'">'+esc(c.name)+(q?' · '+q.best+'/5':'')+'</button>';});
+  $("p-tests").innerHTML=h+'</div>';
+}
+function startQuiz(id){quizRun={id,i:0,score:0,picked:null};showTab("tests");renderQuizRun();}
+function renderQuizRun(){
+  const r=quizRun,qs=QUIZ[r.id];
+  if(r.i>=qs.length){
+    const prev=state.quiz[r.id];
+    state.quiz[r.id]={best:Math.max(r.score,prev?prev.best:0),last:r.score,date:iso(new Date())};save();
+    $("p-tests").innerHTML='<div class="qcard"><span class="eyebrow">'+esc(cName(r.id))+'</span><h2>You scored '+r.score+' out of 5</h2><p>'+(r.score>=4?'Solid. Move on.':'Rewatch the weak parts and retake it in the buffer week.')+'</p><div class="row"><button class="btn primary" id="qBack">Back to tests</button><button class="btn" data-quiz="'+r.id+'">Retake</button></div></div>';
+    quizRun=null;render();showTab("tests",true);return;
+  }
+  const q=qs[r.i];let h='<div class="qcard"><div class="row" style="justify-content:space-between"><span class="eyebrow">'+esc(cName(r.id))+'</span><span class="mono muted">'+(r.i+1)+' / '+qs.length+'</span></div><h3>'+esc(q.q)+'</h3><div class="opts">';
+  q.o.forEach((o,k)=>{let cls="opt";if(r.picked!==null){if(k===q.a)cls+=" right";else if(k===r.picked)cls+=" wrong";}h+='<button class="'+cls+'" data-opt="'+k+'"'+(r.picked!==null?' disabled':'')+'>'+esc(o)+'</button>';});
+  h+='</div>';
+  if(r.picked!==null)h+='<p class="explain"><strong>'+(r.picked===q.a?'Correct. ':'Not quite. ')+'</strong>'+esc(q.e)+'</p><div class="row"><button class="btn primary" id="qNext">'+(r.i+1<qs.length?'Next question':'See score')+'</button></div>';
+  $("p-tests").innerHTML=h+'</div>';
+}
+
+function showTab(name,keep){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===name));
+  ["agenda","courses","tests","settings"].forEach(n=>$("p-"+n).hidden=n!==name);
+  if(name==="tests"&&!quizRun&&!keep)renderTests();
+}
+document.addEventListener("click",e=>{
+  const tb=e.target.closest("nav.tabs button");if(tb){showTab(tb.dataset.tab);return;}
+  const ck=e.target.closest("[data-s]");if(ck){const id=ck.dataset.s;if(state.done[id])delete state.done[id];else state.done[id]=iso(new Date());save();render();return;}
+  const qz=e.target.closest("[data-quiz]");if(qz){startQuiz(qz.dataset.quiz);return;}
+  const op=e.target.closest("[data-opt]");if(op&&quizRun&&quizRun.picked===null){quizRun.picked=+op.dataset.opt;if(quizRun.picked===QUIZ[quizRun.id][quizRun.i].a)quizRun.score++;renderQuizRun();return;}
+  if(e.target.id==="qNext"){quizRun.i++;quizRun.picked=null;renderQuizRun();return;}
+  if(e.target.id==="qBack"){renderTests();return;}
+  if(e.target.id==="resetBtn"){$("resetConfirm").hidden=false;return;}
+  if(e.target.id==="resetNo"){$("resetConfirm").hidden=true;return;}
+  if(e.target.id==="resetYes"){state.done={};state.quiz={};$("resetConfirm").hidden=true;save();render();return;}
+});
+function fillSettings(){
+  ["dayA","dayB"].forEach(id=>{$(id).innerHTML=DAYS.map((d,i)=>'<option value="'+i+'">'+d+'</option>').join("");$(id).value=state[id];});
+  $("startDate").value=state.start;$("timeA").value=state.time;
+}
+["startDate","dayA","dayB","timeA"].forEach(id=>$(id).addEventListener("change",()=>{
+  const v=$("startDate").value;if(v)state.start=iso(mondayOf(parseDate(v)));
+  state.dayA=+$("dayA").value;state.dayB=+$("dayB").value;state.time=$("timeA").value||state.time;
+  $("startDate").value=state.start;save();render();
+}));
+
+$("exportBtn").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="academy-progress-"+iso(new Date())+".json";
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  $("ioMsg").textContent="Exported.";
+});
+$("importFile").addEventListener("change",e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||typeof d!=="object"||!d.start)throw 0;merge(d);fillSettings();save();render();$("ioMsg").textContent="Imported. Progress restored.";}catch(err){$("ioMsg").textContent="That file isn't a planner export. Pick the .json file you exported.";}e.target.value="";};
+  r.readAsText(f);
+});
+function setSync(t){$("sync").textContent=t;}
+function save(){
+  try{localStorage.setItem("academy-planner",JSON.stringify(state));}catch(e){}
+  setSync("Saved on this device.");
+}
+function merge(d){if(!d)return;state=Object.assign(JSON.parse(JSON.stringify(DEFAULT)),JSON.parse(JSON.stringify(d)));state.done=state.done||{};state.quiz=state.quiz||{};}
+
+try{const l=localStorage.getItem("academy-planner");if(l)merge(JSON.parse(l));}catch(e){}
+fillSettings();render();setSync("Loading your progress…");
+setSync("Saved on this device.");
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+</script>
+
+</body>
+</html>
